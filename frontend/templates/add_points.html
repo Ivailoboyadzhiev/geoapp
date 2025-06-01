@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Add Geo Point</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(to right, #eef2f3, #8e9eab);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+      .form-container {
+        background-color: white;
+        padding: 2em;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        max-width: 400px;
+        width: 100%;
+      }
+      h1 {
+        text-align: center;
+        margin-bottom: 1em;
+      }
+      label {
+        display: block;
+        margin-top: 1em;
+      }
+      input,
+      textarea {
+        width: 100%;
+        padding: 0.5em;
+        margin-top: 0.2em;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+      }
+      button {
+        margin-top: 1em;
+        padding: 0.5em 1em;
+        width: 100%;
+        background-color: #2e86de;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1em;
+      }
+      button:hover {
+        background-color: #1b4f72;
+      }
+      #status {
+        margin-top: 1em;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="form-container">
+      <h1>Добави точка</h1>
+      <form id="addPointForm">
+        <label>
+          Ширина:
+          <input type="number" step="any" id="latitude" required />
+        </label>
+        <label>
+          Дължина:
+          <input type="number" step="any" id="longitude" required />
+        </label>
+        <label>
+          Описание:
+          <textarea id="description" rows="3" required></textarea>
+        </label>
+        <button type="submit">Добави</button>
+      </form>
+      <p id="status"></p>
+    </div>
+
+    <script>
+      document
+        .getElementById("addPointForm")
+        .addEventListener("submit", async function (event) {
+          event.preventDefault();
+          const latitude = parseFloat(
+            document.getElementById("latitude").value
+          );
+          const longitude = parseFloat(
+            document.getElementById("longitude").value
+          );
+          const description = document.getElementById("description").value;
+
+          const point = { latitude, longitude, description };
+
+          try {
+            const response = await fetch("/add_point", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(point),
+            });
+
+            if (response.ok) {
+              document.getElementById("status").textContent =
+                "Успешно добавено!";
+              document.getElementById("addPointForm").reset();
+            } else {
+              const error = await response.text();
+              document.getElementById(
+                "status"
+              ).textContent = `Грешка: ${error}`;
+            }
+          } catch (err) {
+            document.getElementById(
+              "status"
+            ).textContent = `Мрежова грешка: ${err}`;
+          }
+        });
+    </script>
+  </body>
+</html>

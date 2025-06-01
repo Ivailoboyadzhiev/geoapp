@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="bg">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Карта</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(to right, #dfe9f3, #ffffff);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .container {
+        background-color: white;
+        margin-top: 2em;
+        padding: 1.5em;
+        border-radius: 12px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        width: 90%;
+        max-width: 900px;
+      }
+      .buttons {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1em;
+      }
+      button {
+        padding: 0.5em 1em;
+        font-size: 1em;
+        background-color: #2e86de;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #1b4f72;
+      }
+      #map {
+        height: 500px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="buttons">
+        <button onclick="window.location.href='/'">Към таблицата</button>
+        <button onclick="window.location.href='/add'">Добави чрез форма</button>
+        <button onclick="startAdding()">🖱 Добави чрез карта</button>
+      </div>
+      <div id="map"></div>
+    </div>
+    <script>
+      let addMode = false;
+      const map = L.map("map").setView([42.6961, 23.3231], 13);
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(map);
+
+      async function loadPoints() {
+        try {
+          const response = await fetch("/points");
+          const points = await response.json();
+          points.forEach((point) => {
+            L.marker([point.latitude, point.longitude])
+              .addTo(map)
+              .bindPopup(point.description);
+          });
+        } catch (err) {
+          console.error("Error loading points:", err);
+        }
+      }
+
+      function startAdding() {
+        alert("Кликни на картата, за да добавиш нова точка.");
+        addMode = true;
+      }
+
+      map.on("click", async function (e) {
+        if (!addMode) return;
+        addMode = false;
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        const description = prompt("Въведи описание на точката:");
+        if (!description) return;
+        const point = { latitude: lat, longitude: lng, description };
+        try {
+          const res = await fetch("/add_point", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(point),
+          });
+          if (res.ok) {
+            alert("Точката е добавена успешно!");
+            const newPoint = await res.json();
+            L.marker([newPoint.latitude, newPoint.longitude])
+              .addTo(map)
+              .bindPopup(newPoint.description)
+              .openPopup();
+          } else {
+            alert("Неуспешно добавяне.");
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Грешка при заявката.");
+        }
+      });
+
+      loadPoints();
+    </script>
+  </body>
+</html>

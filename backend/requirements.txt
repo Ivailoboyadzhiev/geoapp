@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+sqlalchemy
+pymysql
+cryptography
+jinja2
+pytest
+httpx
+python-dotenv
+flake8
+

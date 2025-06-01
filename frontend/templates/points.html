@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="bg">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Списък с точки</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(to right, #dfe9f3, #ffffff);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .container {
+        background-color: white;
+        margin-top: 2em;
+        padding: 1.5em;
+        border-radius: 12px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        width: 90%;
+        max-width: 900px;
+      }
+      .actions {
+        margin-bottom: 1em;
+      }
+      button {
+        padding: 0.5em 1em;
+        font-size: 1em;
+        margin-right: 0.5em;
+        background-color: #2e86de;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #1b4f72;
+      }
+      .delete-btn {
+        background-color: #e74c3c;
+      }
+      .delete-btn:hover {
+        background-color: #c0392b;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: white;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      }
+      th,
+      td {
+        padding: 0.75em;
+        border: 1px solid #ddd;
+        text-align: left;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Списък с точки</h1>
+      <div class="actions">
+        <button onclick="window.location.href='/map'">Към картата</button>
+        <button onclick="fetchPoints()">Обнови таблицата</button>
+      </div>
+      <table id="pointsTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Ширина</th>
+            <th>Дължина</th>
+            <th>Описание</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody id="pointsBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Модален прозорец -->
+    <div
+      id="editModal"
+      style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+      "
+    >
+      <div
+        style="
+          background: white;
+          margin: 10% auto;
+          padding: 20px;
+          border-radius: 8px;
+          width: 300px;
+          position: relative;
+        "
+      >
+        <h3>Редактирай точка</h3>
+        <label
+          >Ширина:
+          <input type="number" id="modal-lat" step="any" required /></label
+        ><br /><br />
+        <label
+          >Дължина:
+          <input type="number" id="modal-lng" step="any" required /></label
+        ><br /><br />
+        <label>Описание: <input type="text" id="modal-desc" required /></label
+        ><br /><br />
+        <button onclick="submitEdit()">Запази</button>
+        <button onclick="closeModal()">Затвори</button>
+      </div>
+    </div>
+
+    <script>
+      let editId = null;
+
+      function openEditModal(id, lat, lng, desc) {
+        editId = id;
+        document.getElementById("modal-lat").value = lat;
+        document.getElementById("modal-lng").value = lng;
+        document.getElementById("modal-desc").value = desc;
+        document.getElementById("editModal").style.display = "block";
+      }
+
+      function closeModal() {
+        document.getElementById("editModal").style.display = "none";
+      }
+
+      function submitEdit() {
+        const newLat = parseFloat(document.getElementById("modal-lat").value);
+        const newLng = parseFloat(document.getElementById("modal-lng").value);
+        const newDesc = document.getElementById("modal-desc").value;
+
+        fetch(`/update_point/${editId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            latitude: newLat,
+            longitude: newLng,
+            description: newDesc,
+          }),
+        })
+          .then((res) => {
+            if (res.ok) {
+              alert(" Успешно обновено!");
+              fetchPoints();
+            } else {
+              alert(" Грешка при обновяване.");
+            }
+          })
+          .catch(() => alert("Мрежова грешка."));
+
+        closeModal();
+      }
+
+      async function fetchPoints() {
+        try {
+          const response = await fetch("/points");
+          const points = await response.json();
+          const tbody = document.getElementById("pointsBody");
+          tbody.innerHTML = "";
+          points.forEach((point) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+            <td>${point.id}</td>
+            <td>${point.latitude}</td>
+            <td>${point.longitude}</td>
+            <td>${point.description}</td>
+            <td>
+              <button onclick="openEditModal(${point.id}, ${point.latitude}, ${point.longitude}, '${point.description}')">✏️ Редактирай</button>
+              <button class="delete-btn" onclick="deletePoint(${point.id})">🗑️ Изтрий</button>
+            </td>
+          `;
+            tbody.appendChild(row);
+          });
+        } catch (err) {
+          console.error("Failed to fetch points:", err);
+        }
+      }
+
+      async function deletePoint(id) {
+        if (!confirm("Сигурен ли си, че искаш да изтриеш точката?")) return;
+        try {
+          const res = await fetch(`/delete_point/${id}`, { method: "DELETE" });
+          if (res.ok) fetchPoints();
+          else alert("Грешка при изтриване");
+        } catch (err) {
+          console.error(err);
+          alert("Неуспешна заявка");
+        }
+      }
+
+      window.addEventListener("focus", fetchPoints);
+      fetchPoints();
+    </script>
+  </body>
+</html>
